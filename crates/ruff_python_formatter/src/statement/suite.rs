@@ -33,6 +33,9 @@ pub enum SuiteKind {
     /// Statements in a class body.
     Class,
 
+    /// Statements in a if body.
+    If { single: bool },
+
     /// Statements in any other body (e.g., `if` or `while`).
     #[default]
     Other,
@@ -66,7 +69,7 @@ impl FormatRule<Suite, PyFormatContext<'_>> for FormatSuite {
                         TopLevelStatementPosition::Other
                     }),
             ),
-            SuiteKind::Function | SuiteKind::Class | SuiteKind::Other => {
+            SuiteKind::Function | SuiteKind::Class | SuiteKind::If { .. } | SuiteKind::Other => {
                 NodeLevel::CompoundStatement
             }
         };
@@ -80,7 +83,7 @@ impl FormatRule<Suite, PyFormatContext<'_>> for FormatSuite {
 
         // Format the first statement in the body, which often has special formatting rules.
         let first = match self.kind {
-            SuiteKind::Other => {
+            SuiteKind::If { .. } | SuiteKind::Other => {
                 if is_class_or_function_definition(first)
                     && !comments.has_leading(first)
                     && !source_type.is_stub()
@@ -284,7 +287,10 @@ impl FormatRule<Suite, PyFormatContext<'_>> for FormatSuite {
                             SuiteKind::TopLevel => {
                                 write!(f, [empty_line(), empty_line()])?;
                             }
-                            SuiteKind::Function | SuiteKind::Class | SuiteKind::Other => {
+                            SuiteKind::Function
+                            | SuiteKind::Class
+                            | SuiteKind::If { .. }
+                            | SuiteKind::Other => {
                                 empty_line().fmt(f)?;
                             }
                         }
@@ -316,7 +322,10 @@ impl FormatRule<Suite, PyFormatContext<'_>> for FormatSuite {
                             },
                         }
                     }
-                    SuiteKind::Function | SuiteKind::Class | SuiteKind::Other => {
+                    SuiteKind::Function
+                    | SuiteKind::Class
+                    | SuiteKind::If { .. }
+                    | SuiteKind::Other => {
                         empty_line().fmt(f)?;
                     }
                 }
@@ -355,7 +364,10 @@ impl FormatRule<Suite, PyFormatContext<'_>> for FormatSuite {
                                 write!(f, [empty_line(), empty_line()])?;
                             }
                         },
-                        SuiteKind::Function | SuiteKind::Class | SuiteKind::Other => {
+                        SuiteKind::Function
+                        | SuiteKind::Class
+                        | SuiteKind::If { .. }
+                        | SuiteKind::Other => {
                             empty_line().fmt(f)?;
                         }
                     },
@@ -478,7 +490,7 @@ fn stub_file_empty_lines(
                 hard_line_break().fmt(f)
             }
         }
-        SuiteKind::Class | SuiteKind::Other | SuiteKind::Function => {
+        SuiteKind::Class | SuiteKind::If { .. } | SuiteKind::Other | SuiteKind::Function => {
             if empty_line_condition
                 && lines_after_ignoring_end_of_line_trivia(preceding.end(), source) > 1
             {

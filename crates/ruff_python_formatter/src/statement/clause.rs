@@ -1,5 +1,5 @@
 use ruff_formatter::{write, Argument, Arguments, FormatError};
-use ruff_python_ast::AnyNodeRef;
+use ruff_python_ast::{AnyNodeRef, Stmt};
 use ruff_python_ast::{
     ElifElseClause, ExceptHandlerExceptHandler, MatchCase, StmtClassDef, StmtFor, StmtFunctionDef,
     StmtIf, StmtMatch, StmtTry, StmtWhile, StmtWith, Suite,
@@ -397,8 +397,27 @@ impl Format<PyFormatContext<'_>> for FormatClauseBody<'_> {
         let should_collapse_stub = f.options().source_type().is_stub()
             || (is_dummy_implementations_enabled(f.context())
                 && matches!(self.kind, SuiteKind::Function | SuiteKind::Class));
-
-        if should_collapse_stub
+        if (matches!(self.kind, SuiteKind::If { single: true })
+            && self
+                .body
+                .iter()
+                .next()
+                .map(|v| match v {
+                    Stmt::Return(stmt) => stmt.value.is_none(),
+                    _ => false,
+                })
+                .unwrap_or(false))
+        {
+            write!(
+                f,
+                [
+                    space(),
+                    self.body.format().with_options(self.kind),
+                    trailing_comments(self.trailing_comments),
+                    hard_line_break()
+                ]
+            )
+        } else if should_collapse_stub
             && contains_only_an_ellipsis(self.body, f.context().comments())
             && self.trailing_comments.is_empty()
         {

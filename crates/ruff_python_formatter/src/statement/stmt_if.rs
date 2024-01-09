@@ -2,6 +2,7 @@ use ruff_formatter::{format_args, write};
 use ruff_python_ast::AnyNodeRef;
 use ruff_python_ast::{ElifElseClause, StmtIf};
 
+use super::suite::SuiteKind;
 use crate::comments::SourceComment;
 use crate::expression::maybe_parenthesize_expression;
 use crate::expression::parentheses::Parenthesize;
@@ -35,7 +36,9 @@ impl FormatNodeRule<StmtIf> for FormatStmtIf {
                         maybe_parenthesize_expression(test, item, Parenthesize::IfBreaks),
                     ],
                 ),
-                clause_body(body, trailing_colon_comment),
+                clause_body(body, trailing_colon_comment).with_kind(SuiteKind::If {
+                    single: elif_else_clauses.len() == 0
+                }),
             ]
         )?;
 
